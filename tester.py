@@ -1,24 +1,59 @@
 import speedtest
-import tkinter
+import time
+import threading
+import sys
 
-def test_speed():
+running = False
+
+
+def spinner():
+    while running:
+        for c in "|/-\\":
+            sys.stdout.write(f"\rMěřím... {c}")
+            sys.stdout.flush()
+            time.sleep(0.1)
+
+
+def measure_speed():
     st = speedtest.Speedtest()
     st.get_best_server()
-    download_speed = st.download() / 1_000_000  # Convert to Mbps
-    upload_speed = st.upload() / 1_000_000  # Convert to Mbps
-    result_label.config(text=f"Download Speed: {download_speed:.2f} Mbps\nUpload Speed: {upload_speed:.2f} Mbps")
 
-def create_gui():
-    global result_label
-    root = tkinter.Tk()
-    root.title("Internet Speed Tester")
+    ping = st.results.ping
+    download = st.download() / 1_000_000
+    upload = st.upload() / 1_000_000
 
-    test_button = tkinter.Button(root, text="Test Speed", command=test_speed)
-    test_button.pack(pady=20)
+    return ping, download, upload
 
-    result_label = tkinter.Label(root, text="")
-    result_label.pack(pady=20)
 
-    root.mainloop()
+def run_once():
+    global running
+    running = True
 
-create_gui()
+    t = threading.Thread(target=spinner)
+    t.start()
+
+    ping, download, upload = measure_speed()
+
+    running = False
+    t.join()
+
+    print("\r" + " " * 30, end="\r")  # vyčistí řádek
+    print(f"Ping: {ping:.0f} ms")
+    print(f"Download: {download:.2f} Mbps")
+    print(f"Upload: {upload:.2f} Mbps\n")
+
+
+
+# MENU
+while True:
+    print("1 - Jednorázový test")
+    print("2 - Konec")
+
+    choice = input("Vyber: ")
+
+    if choice == "1":
+        run_once()
+    elif choice == "2":
+        break
+    else:
+        print("Neplatná volba\n")
